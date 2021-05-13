@@ -5,86 +5,62 @@
 package frc.robot.subsystems;
 
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
-import com.ctre.phoenix.sensors.CANCoder;
 
-
-import edu.wpi.first.wpilibj.geometry.Translation2d;
 import edu.wpi.first.wpilibj.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.wpilibj.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import com.kauailabs.navx.frc.AHRS;
-import edu.wpi.first.wpilibj.SerialPort;
+
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.geometry.Rotation2d;
+
+import com.kauailabs.navx.frc.AHRS;
+
+import frc.robot.Constants.SwerveDrive;
+
+
 public class SwerveDrivetrain extends SubsystemBase {
 
-  //these are limits you can change!!!
-  public static final double kMaxSpeed = Units.feetToMeters(13.6); // 20 feet per second
-  public static final double kMaxAngularSpeed = Math.PI; // 1/2 rotation per second
-  public static double feildCalibration = 0;
+  private TalonFX frontRightMotor;
+  private TalonFX frontLeftMotor;
+  private TalonFX backRightMotor;
+  private TalonFX backLeftMotor;
 
-  //this is where you put the angle offsets you got from the smart dashboard
+  private SwerveModuleMK3[] modules;
 
-  public static double frontLeftOffset = 0;
-  public static double frontRightOffset = 0;
-  public static double backLeftOffset = 0;
-  public static double backRightOffset = 0;
-
-
-  //put your can Id's here!
-  public static final int frontLeftDriveId = 1; 
-  public static final int frontLeftCANCoderId = 2; 
-  public static final int frontLeftSteerId = 3;
-  //put your can Id's here!
-  public static final int frontRightDriveId = 4; 
-  public static final int frontRightCANCoderId = 5; 
-  public static final int frontRightSteerId = 6; 
-  //put your can Id's here!
-  public static final int backLeftDriveId = 10; 
-  public static final int backLeftCANCoderId = 11; 
-  public static final int backLeftSteerId = 12;
-  //put your can Id's here!
-
-  public static final int backRightDriveId = 7; 
-  public static final int backRightCANCoderId = 8; 
-  public static final int backRightSteerId = 9;   
-  public static AHRS gyro = new AHRS(SPI.Port.kMXP);
-
-  private SwerveDriveKinematics kinematics = new SwerveDriveKinematics(
-    new Translation2d(
-      Units.inchesToMeters(10),
-      Units.inchesToMeters(10)
-    ),
-    new Translation2d(
-      Units.inchesToMeters(10),
-      Units.inchesToMeters(-10)
-    ),
-    new Translation2d(
-      Units.inchesToMeters(-10),
-      Units.inchesToMeters(10)
-    ),
-    new Translation2d(
-      Units.inchesToMeters(-10),
-      Units.inchesToMeters(-10)
-    )
-  );
-
- 
-
-  private SwerveModuleMK3[] modules = new SwerveModuleMK3[] {
-
-    new SwerveModuleMK3(new TalonFX(frontLeftDriveId), new TalonFX(frontLeftSteerId), new CANCoder(frontLeftCANCoderId), Rotation2d.fromDegrees(frontLeftOffset)), // Front Left
-    new SwerveModuleMK3(new TalonFX(frontRightDriveId), new TalonFX(frontRightSteerId), new CANCoder(frontRightCANCoderId), Rotation2d.fromDegrees(frontRightOffset)), // Front Right
-    new SwerveModuleMK3(new TalonFX(backLeftDriveId), new TalonFX(backLeftSteerId), new CANCoder(backLeftCANCoderId), Rotation2d.fromDegrees(backLeftOffset)), // Back Left
-    new SwerveModuleMK3(new TalonFX(backRightDriveId), new TalonFX(backRightSteerId), new CANCoder(backRightCANCoderId), Rotation2d.fromDegrees(backRightOffset))  // Back Right
-
-  };
+  private AHRS gyro;
 
   public SwerveDrivetrain() {
-   // gyro.reset(); 
+    this.frontLeftMotor     = new TalonFX(SwerveDrive.frontLeftMotorID);
+    this.frontRightMotor    = new TalonFX(SwerveDrive.frontRightMotorID);
+    this.backLeftMotor      = new TalonFX(SwerveDrive.backLeftMotorID);
+    this.backRightMotor     = new TalonFX(SwerveDrive.backRightMotorID);
+
+    // this.frontRightMotor.setInverted(true);
+    this.frontLeftMotor.setInverted(true);
+    this.backRightMotor.setInverted(true);
+
+    SwerveModuleMK3 frontLeftModule   = new SwerveModuleMK3(this.frontLeftMotor, SwerveDrive.frontLeftTurnTalonID, false, SwerveDrive.frontLeftEncoderID, Rotation2d.fromDegrees(SwerveDrive.frontLeftEncoderOffset), "Front Left");
+    SwerveModuleMK3 frontRightModule  = new SwerveModuleMK3(this.frontRightMotor, SwerveDrive.frontRightTurnTalonID, true, SwerveDrive.frontRightEncoderID, Rotation2d.fromDegrees(SwerveDrive.frontRightEncoderOffset), "Front Right");
+    SwerveModuleMK3 backLeftModule    = new SwerveModuleMK3(this.backLeftMotor, SwerveDrive.backLeftTurnTalonID, true, SwerveDrive.backLeftEncoderID, Rotation2d.fromDegrees(SwerveDrive.backLeftEncoderOffset), "Back Left");
+    SwerveModuleMK3 backRightModule   = new SwerveModuleMK3(this.backRightMotor, SwerveDrive.backRightTurnTalonID, true, SwerveDrive.backRightEncoderID, Rotation2d.fromDegrees(SwerveDrive.backRightEncoderOffset), "Back Right");
+    
+    this.modules = new SwerveModuleMK3[] {
+      frontLeftModule,
+      frontRightModule,
+      backLeftModule,
+      backRightModule
+    };
+
+    try {
+      this.gyro = new AHRS(SPI.Port.kMXP);
+      this.gyro.reset();
+    } catch (RuntimeException ex) {
+      System.out.println("#######################");
+      System.out.println("NavX not plugged in !!!");
+      System.out.println("#######################");
+    }
   }
 
   /**
@@ -98,23 +74,26 @@ public class SwerveDrivetrain extends SubsystemBase {
    */
   public void drive(double xSpeed, double ySpeed, double rot, boolean fieldRelative, boolean calibrateGyro) {
     
-    if(calibrateGyro){
+    if(calibrateGyro) {
       gyro.reset(); //recalibrates gyro offset
     }
 
     SwerveModuleState[] states =
-      kinematics.toSwerveModuleStates(
+      SwerveDrive.normalizedKinematics.toSwerveModuleStates(
         fieldRelative
           ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot, Rotation2d.fromDegrees(-gyro.getAngle()))
-          : new ChassisSpeeds(xSpeed, ySpeed, rot));
-    SwerveDriveKinematics.normalizeWheelSpeeds(states, kMaxSpeed);
+          : new ChassisSpeeds(xSpeed, ySpeed, rot)
+      );
+
+    SwerveDriveKinematics.normalizeWheelSpeeds(states, SwerveDrive.kMaxSpeed);
     for (int i = 0; i < states.length; i++) {
       SwerveModuleMK3 module = modules[i];
       SwerveModuleState state = states[i];
       SmartDashboard.putNumber(String.valueOf(i), module.getRawAngle());
       //below is a line to comment out from step 5
       module.setDesiredState(state);
-      SmartDashboard.putNumber("gyro Angle", gyro.getAngle());
+      SmartDashboard.putNumber("gyro angle", gyro.getAngle());
+      SmartDashboard.putNumber("Encoder value " + String.valueOf(i), module.getRawAngle());
     }
   }
 
